@@ -21,7 +21,7 @@ namespace texture {
 	GLuint clouds;
 	GLuint moon;
 	GLuint ship;
-
+	GLuint road;
 	GLuint grid;
 
 	GLuint earthNormal;
@@ -37,6 +37,7 @@ Core::Shader_Loader shaderLoader;
 
 Core::RenderContext shipContext;
 Core::RenderContext sphereContext;
+Core::RenderContext cubeContext;
 
 glm::vec3 cameraPos = glm::vec3(-4.f, 0, 0);
 glm::vec3 cameraDir = glm::vec3(1.f, 0.f, 0.f);
@@ -133,6 +134,8 @@ void renderScene(GLFWwindow* window)
 		glm::vec3(0.3, 0.3, 0.5)
 	);
 
+	drawObjectTexture(cubeContext, glm::translate(glm::vec3(6.5, -0.1, 6.5)) * glm::scale(glm::vec3(2.0f, 0.02f, 1.4f)), texture::road);
+
 	glUseProgram(0);
 	glfwSwapBuffers(window);
 }
@@ -163,6 +166,9 @@ void init(GLFWwindow* window)
 
 	loadModelToContext("./models/sphere.obj", sphereContext);
 	loadModelToContext("./models/spaceship.obj", shipContext);
+	loadModelToContext("./models/cube.obj", cubeContext);
+
+	texture::road = Core::LoadTexture("./textures/road.jpg");
 
 }
 
