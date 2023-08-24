@@ -48,6 +48,10 @@ GLuint VAO, VBO;
 
 float aspectRatio = 1.f;
 
+//textury skyboxa, powiny być w trochę innej kolejności ale i tak jest ok
+unsigned int textureID;
+std::vector<std::string> textures_faces = { "./textures/skybox/negz.jpg","./textures/skybox/posz.jpg" ,"./textures/skybox/posy.jpg" ,"./textures/skybox/negy.jpg" ,"./textures/skybox/posx.jpg" ,"./textures/skybox/negx.jpg" };
+
 glm::mat4 createCameraMatrix()
 {
 	glm::vec3 cameraSide = glm::normalize(glm::cross(cameraDir, glm::vec3(0.f, 1.f, 0.f)));
@@ -97,6 +101,17 @@ void drawObjectColor(Core::RenderContext& context, glm::mat4 modelMatrix, glm::v
 	Core::DrawContext(context);
 
 }
+
+//skybox
+void drawObjectCube(Core::RenderContext& context, glm::mat4 modelMatrix, GLuint textureID) {
+	glUseProgram(programCubeMap);
+	glm::mat4 viewProjectionMatrix = createPerspectiveMatrix() * createCameraMatrix();
+	glm::mat4 transformation = viewProjectionMatrix * modelMatrix;
+	glUniformMatrix4fv(glGetUniformLocation(programCubeMap, "transformation"), 1, GL_FALSE, (float*)&transformation);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
+	Core::DrawContext(context);
+}
+
 void renderScene(GLFWwindow* window)
 {
 	glClearColor(0.0f, 0.3f, 0.3f, 1.0f);
