@@ -23,6 +23,7 @@ namespace texture {
 	GLuint ship;
 	GLuint road;
 	GLuint grid;
+	GLuint airplane;
 
 	GLuint earthNormal;
 	GLuint asteroidNormal;
@@ -38,6 +39,7 @@ Core::Shader_Loader shaderLoader;
 Core::RenderContext shipContext;
 Core::RenderContext sphereContext;
 Core::RenderContext cubeContext;
+Core::RenderContext planeContext;
 
 glm::vec3 cameraPos = glm::vec3(-4.f, 0, 0);
 glm::vec3 cameraDir = glm::vec3(1.f, 0.f, 0.f);
@@ -182,8 +184,10 @@ void init(GLFWwindow* window)
 	loadModelToContext("./models/sphere.obj", sphereContext);
 	loadModelToContext("./models/spaceship.obj", shipContext);
 	loadModelToContext("./models/cube.obj", cubeContext);
+	loadModelToContext("./models/10593_Fighter_Jet_SG_v1_iterations-2.obj", planeContext);
 
 	texture::road = Core::LoadTexture("./textures/road.jpg");
+	texture::airplane = Core::LoadTexture("./textures/10593_Fighter_Jet_SG_v1_diffuse.jpg");
 
 }
 
