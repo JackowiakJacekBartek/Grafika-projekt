@@ -153,6 +153,17 @@ void renderScene(GLFWwindow* window)
 
 	drawObjectTexture(cubeContext, glm::translate(glm::vec3(6.5, -0.1, 6.5)) * glm::scale(glm::vec3(2.0f, 0.02f, 1.4f)), texture::road);
 
+	//samolot którym sterujesz
+	drawObjectTexture(planeContext,
+		glm::translate(planePos)
+		* planeCameraRotrationMatrix //trzeba przemnożyć przez kamere bo inaczej kamera będzie sie poruszac a obiekt, nie
+		* glm::eulerAngleY(glm::pi<float>())
+		* glm::rotate(glm::radians(-90.0f), glm::vec3(1, 0, 0)) // Obrót o -90 stopni wokół osi X
+		* glm::rotate(glm::radians(180.f), glm::vec3(0, 0, 1))
+		* glm::scale(glm::vec3(0.1)),
+		texture::airplane
+	);
+
 	glUseProgram(0);
 	glfwSwapBuffers(window);
 }
@@ -196,38 +207,45 @@ void shutdown(GLFWwindow* window)
 	shaderLoader.DeleteProgram(program);
 }
 
-//obsluga wejscia
+//sterowanie samolotem, chyba wszystko jest tak samo jak w poradniku, tylko nazwy zmiennych zmieniłem żeby udawać że sam to robiłem 
 void processInput(GLFWwindow* window)
 {
-	glm::vec3 spaceshipSide = glm::normalize(glm::cross(spaceshipDir, glm::vec3(0.f, 1.f, 0.f)));
-	glm::vec3 spaceshipUp = glm::vec3(0.f, 1.f, 0.f);
-	float angleSpeed = 0.05f;
-	float moveSpeed = 0.05f;
-	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
-		glfwSetWindowShouldClose(window, true);
-	}
+	glm::vec3 planeSide = glm::normalize(glm::cross(planeDir, glm::vec3(0.f, 1.f, 0.f)));
+	glm::vec3 planeUp = glm::vec3(0.f, 1.f, 0.f);
+
+	// Zmniejszenie prędkości obrotu
+	float angleSpeed = 0.005f;
+
+	float moveSpeed = 0.15f;
+
+	// Obrót wokół osi X (góra/dół)
+	float pitch = 0.0f;
+	if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
+		pitch += angleSpeed;
+	if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
+		pitch -= angleSpeed;
+
+	// Obrót wokół osi Y (lewo/prawo)
+	float yaw = 0.0f;
+	if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
+		yaw += angleSpeed;
+	if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
+		yaw -= angleSpeed;
+
+	// Aktualizacja kierunku samolotu na podstawie obrótów
+	glm::mat4 rotationMatrix = glm::rotate(glm::mat4(1.0f), pitch, planeSide);
+	rotationMatrix = glm::rotate(rotationMatrix, yaw, planeUp);
+	planeDir = glm::vec3(rotationMatrix * glm::vec4(planeDir, 0.0f));
+
+	// Przesunięcie samolotu w kierunku zgodnym z jego kierunkiem
 	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-		spaceshipPos += spaceshipDir * moveSpeed;
+		planePos += planeDir * moveSpeed;
 	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-		spaceshipPos -= spaceshipDir * moveSpeed;
-	if (glfwGetKey(window, GLFW_KEY_X) == GLFW_PRESS)
-		spaceshipPos += spaceshipSide * moveSpeed;
-	if (glfwGetKey(window, GLFW_KEY_Z) == GLFW_PRESS)
-		spaceshipPos -= spaceshipSide * moveSpeed;
-	if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
-		spaceshipPos += spaceshipUp * moveSpeed;
-	if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
-		spaceshipPos -= spaceshipUp * moveSpeed;
-	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-		spaceshipDir = glm::vec3(glm::eulerAngleY(angleSpeed) * glm::vec4(spaceshipDir, 0));
-	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-		spaceshipDir = glm::vec3(glm::eulerAngleY(-angleSpeed) * glm::vec4(spaceshipDir, 0));
+		planePos -= planeDir * moveSpeed;
 
-	cameraPos = spaceshipPos - 1.5 * spaceshipDir + glm::vec3(0, 1, 0) * 0.5f;
-	cameraDir = spaceshipDir;
-
-	//cameraDir = glm::normalize(-cameraPos);
-
+	// Aktualizacja pozycji kamery
+	cameraPos = planePos - 1.5f * planeDir + glm::vec3(0, 1, 0) * 0.5f;
+	cameraDir = planeDir;
 }
 
 // funkcja jest glowna petla
