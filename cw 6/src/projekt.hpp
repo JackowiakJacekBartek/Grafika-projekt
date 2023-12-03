@@ -151,6 +151,16 @@ void renderScene(GLFWwindow* window)
 		glm::vec3(0.3, 0.3, 0.5)
 	);
 
+	//zbiornik tank
+	drawObjectTexture(tankContext, glm::translate(glm::vec3(18, 0, 14)) * glm::scale(glm::vec3(2)) * glm::rotate(glm::radians(-30.0f), glm::vec3(0, 1, 0)), texture::tank);
+
+	//wrak auta
+	drawObjectTexture(rustedCar, glm::translate(glm::vec3(10, 0, 0)) * glm::scale(glm::vec3(0.33f)), texture::rustedCar);
+
+	//wark samolotu
+	drawObjectTexture(airplane2Context, glm::translate(glm::vec3(16, 0, 0)) * glm::scale(glm::vec3(0.7f)) * glm::scale(glm::vec3(0.02)) * glm::rotate(glm::radians(-90.0f), glm::vec3(1, 0, 0)) * glm::rotate(glm::radians(30.0f), glm::vec3(0, 0, 1)), texture::rustedCar);
+	
+	//road
 	drawObjectTexture(cubeContext, glm::translate(glm::vec3(6.5, -0.1, 6.5)) * glm::scale(glm::vec3(2.0f, 0.02f, 1.4f)), texture::road);
 
 	//samolot którym sterujesz
@@ -196,9 +206,13 @@ void init(GLFWwindow* window)
 	loadModelToContext("./models/spaceship.obj", shipContext);
 	loadModelToContext("./models/cube.obj", cubeContext);
 	loadModelToContext("./models/10593_Fighter_Jet_SG_v1_iterations-2.obj", planeContext);
+	loadModelToContext("./models/Water_Tank_BI.obj", tankContext);
+	loadModelToContext("./models/Rusted Car.obj", rustedCar);
 
 	texture::road = Core::LoadTexture("./textures/road.jpg");
 	texture::airplane = Core::LoadTexture("./textures/10593_Fighter_Jet_SG_v1_diffuse.jpg");
+	texture::tank = Core::LoadTexture("./textures/water_tank_col.png");
+	texture::rustedCar = Core::LoadTexture("./textures/Car Uv.png");
 
 }
 
