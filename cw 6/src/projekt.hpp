@@ -151,6 +151,11 @@ void renderScene(GLFWwindow* window)
 		glm::vec3(0.3, 0.3, 0.5)
 	);
 
+	float time = glfwGetTime();
+
+	//kosmita
+	drawObjectTexture(alienContext, glm::translate(glm::vec3(15.0, 0.5 + (sin(time*20)/2), 8.0)) * glm::scale(glm::vec3(0.02)) * glm::rotate(glm::radians(-90.0f), glm::vec3(1, 0, 0)), texture::alien);
+
 	//zbiornik tank
 	drawObjectTexture(tankContext, glm::translate(glm::vec3(18, 0, 14)) * glm::scale(glm::vec3(2)) * glm::rotate(glm::radians(-30.0f), glm::vec3(0, 1, 0)), texture::tank);
 
@@ -207,12 +212,15 @@ void init(GLFWwindow* window)
 	loadModelToContext("./models/cube.obj", cubeContext);
 	loadModelToContext("./models/10593_Fighter_Jet_SG_v1_iterations-2.obj", planeContext);
 	loadModelToContext("./models/Water_Tank_BI.obj", tankContext);
+	loadModelToContext("./models/alien.obj", alienContext);
 	loadModelToContext("./models/Rusted Car.obj", rustedCar);
 
 	texture::road = Core::LoadTexture("./textures/road.jpg");
 	texture::airplane = Core::LoadTexture("./textures/10593_Fighter_Jet_SG_v1_diffuse.jpg");
 	texture::tank = Core::LoadTexture("./textures/water_tank_col.png");
 	texture::rustedCar = Core::LoadTexture("./textures/Car Uv.png");
+	texture::alien = Core::LoadTexture("./textures/alien.jpg");
+
 
 }
 
