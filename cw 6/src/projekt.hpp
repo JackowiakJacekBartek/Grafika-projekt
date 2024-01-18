@@ -104,6 +104,18 @@ void drawObjectColor(Core::RenderContext& context, glm::mat4 modelMatrix, glm::v
 
 }
 
+//słońce
+void drawObjectSun(Core::RenderContext& context, glm::mat4 modelMatrix, glm::vec3 color) {
+	glUseProgram(programSun);
+	glm::mat4 viewProjectionMatrix = createPerspectiveMatrix() * createCameraMatrix();
+	glm::mat4 transformation = viewProjectionMatrix * modelMatrix;
+	glUniformMatrix4fv(glGetUniformLocation(programSun, "transformation"), 1, GL_FALSE, (float*)&transformation);
+	glUniformMatrix4fv(glGetUniformLocation(programSun, "modelMatrix"), 1, GL_FALSE, (float*)&modelMatrix);
+	glUniform3f(glGetUniformLocation(programSun, "color"), color.x, color.y, color.z);
+	glUniform3f(glGetUniformLocation(programSun, "lightPos"), 0, 0, 0);
+	Core::DrawContext(context);
+}
+
 //skybox
 void drawObjectCube(Core::RenderContext& context, glm::mat4 modelMatrix, GLuint textureID) {
 	glUseProgram(programCubeMap);
@@ -152,6 +164,9 @@ void renderScene(GLFWwindow* window)
 	);
 
 	float time = glfwGetTime();
+
+	//slonce, w 3 parametrze mozna zmienic kolor np vec3(1.0, 0.0, 0.0) to czerwony.
+	drawObjectSun(sphereContext, glm::translate(glm::vec3(6.0, 25.0, 6.0)) * glm::scale(glm::vec3(10.0)), glm::vec3(1.0, 1.0, 0.1));
 
 	//kosmita
 	drawObjectTexture(alienContext, glm::translate(glm::vec3(15.0, 0.5 + (sin(time*20)/2), 8.0)) * glm::scale(glm::vec3(0.02)) * glm::rotate(glm::radians(-90.0f), glm::vec3(1, 0, 0)), texture::alien);
