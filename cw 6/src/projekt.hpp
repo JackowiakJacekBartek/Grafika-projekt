@@ -183,6 +183,12 @@ void renderScene(GLFWwindow* window)
 	//road
 	drawObjectTexture(cubeContext, glm::translate(glm::vec3(6.5, -0.1, 6.5)) * glm::scale(glm::vec3(2.0f, 0.02f, 1.4f)), texture::road);
 
+	//kot
+	drawObjectTexture(catContext, glm::translate(glm::vec3(15, 0, 8)) * glm::scale(glm::vec3(0.03f)) * glm::rotate(glm::radians(-90.0f), glm::vec3(1, 0, 0)), texture::cat);
+
+	//wark samolotu
+	drawObjectTexture(airplane2Context, glm::translate(glm::vec3(16, 0, 0)) * glm::scale(glm::vec3(0.7f)) * glm::scale(glm::vec3(0.02)) * glm::rotate(glm::radians(-90.0f), glm::vec3(1, 0, 0)) * glm::rotate(glm::radians(30.0f), glm::vec3(0, 0, 1)), texture::rustedCar);
+
 	//samolot którym sterujesz
 	drawObjectTexture(planeContext,
 		glm::translate(planePos)
@@ -223,18 +229,25 @@ void init(GLFWwindow* window)
 	program = shaderLoader.CreateProgram("shaders/shader_5_1.vert", "shaders/shader_5_1.frag");
 
 	loadModelToContext("./models/sphere.obj", sphereContext);
-	loadModelToContext("./models/spaceship.obj", shipContext);
-	loadModelToContext("./models/cube.obj", cubeContext);
 	loadModelToContext("./models/10593_Fighter_Jet_SG_v1_iterations-2.obj", planeContext);
-	loadModelToContext("./models/Water_Tank_BI.obj", tankContext);
+	loadModelToContext("./models/cube.obj", cubeContext);
+	loadModelToContext("./models/12221_Cat_v1_l3.obj", catContext);
 	loadModelToContext("./models/alien.obj", alienContext);
+	loadModelToContext("./models/Street Light.obj", lightPoleContext);
+	loadModelToContext("./models/Water_Tank_BI.obj", tankContext);
 	loadModelToContext("./models/Rusted Car.obj", rustedCar);
+	loadModelToContext("./models/11804_Airplane_v2_l2.obj", airplane2Context);
 
-	texture::road = Core::LoadTexture("./textures/road.jpg");
+	// tu są ładwowane textury
+	texture::grid = Core::LoadTexture("./textures/grid.png");
 	texture::airplane = Core::LoadTexture("./textures/10593_Fighter_Jet_SG_v1_diffuse.jpg");
+	texture::road = Core::LoadTexture("./textures/road.jpg");
+	texture::cat = Core::LoadTexture("./textures/Cat_diffuse.JPG");
+	texture::alien = Core::LoadTexture("./textures/alien.jpg");
+	texture::lighPole = Core::LoadTexture("./textures/Light Pole.png");
 	texture::tank = Core::LoadTexture("./textures/water_tank_col.png");
 	texture::rustedCar = Core::LoadTexture("./textures/Car Uv.png");
-	texture::alien = Core::LoadTexture("./textures/alien.jpg");
+	texture::airplane2 = Core::LoadTexture("./textures/Car Uv.jpg");
 
 
 }
