@@ -1,14 +1,10 @@
 #include "glew.h"
-
 #include <GLFW/glfw3.h>
 #include "glm.hpp"
 #include "ext.hpp"
 #include <iostream>
 #include <cmath>
-
-#include "ex_6_1.hpp"
-
-
+#include "projekt.hpp"
 
 int main(int argc, char** argv)
 {
@@ -23,7 +19,7 @@ int main(int argc, char** argv)
 #endif
 
 	// tworzenie okna za pomoca glfw
-	GLFWwindow* window = glfwCreateWindow(500, 500, "FirstWindow", NULL, NULL);
+	GLFWwindow* window = glfwCreateWindow(900, 700, "FirstWindow", NULL, NULL);
 	if (window == NULL)
 	{
 		std::cout << "Failed to create GLFW window" << std::endl;
@@ -34,7 +30,7 @@ int main(int argc, char** argv)
 
 	// ladowanie OpenGL za pomoca glew
 	glewInit();
-	glViewport(0, 0, 500, 500);
+	glViewport(0, 0, 900, 700);
 
 	init(window);
 

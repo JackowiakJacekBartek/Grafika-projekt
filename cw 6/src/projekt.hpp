@@ -4,56 +4,70 @@
 #include "ext.hpp"
 #include <iostream>
 #include <cmath>
-
 #include "Shader_Loader.h"
 #include "Render_Utils.h"
 #include "Texture.h"
-
-#include "Box.cpp"
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 #include <string>
 
+#include "SOIL/stb_image_aug.h"
+
+#define STB_IMAGE_IMPLEMENTATION
 
 namespace texture {
-	GLuint earth;
-	GLuint clouds;
-	GLuint moon;
-	GLuint ship;
-	GLuint road;
-	GLuint grid;
+	GLuint blueCar;
+	GLuint redCar;
+	GLuint purpleCar;
 	GLuint airplane;
-
-	GLuint earthNormal;
-	GLuint asteroidNormal;
-	GLuint shipNormal;
+	GLuint road;
+	GLuint cat;
+	GLuint alien;
+	GLuint grid;
+	GLuint lighPole;
+	GLuint tank;
+	GLuint rustedCar;
+	GLuint airplane2;
 }
-
 
 GLuint program;
 GLuint programSun;
 GLuint programTex;
+GLuint programCubeMap;
+
 Core::Shader_Loader shaderLoader;
 
-Core::RenderContext shipContext;
-Core::RenderContext sphereContext;
-Core::RenderContext cubeContext;
 Core::RenderContext planeContext;
+Core::RenderContext sphereContext;
+Core::RenderContext carContext;
+Core::RenderContext cubeContext;
+Core::RenderContext catContext;
+Core::RenderContext alienContext;
+Core::RenderContext lightPoleContext;
+Core::RenderContext tankContext;
+Core::RenderContext rustedCar;
+Core::RenderContext airplane2Context;
 
 glm::vec3 cameraPos = glm::vec3(-4.f, 0, 0);
 glm::vec3 cameraDir = glm::vec3(1.f, 0.f, 0.f);
 
-glm::vec3 spaceshipPos = glm::vec3(-4.f, 0, 0);
-glm::vec3 spaceshipDir = glm::vec3(1.f, 0.f, 0.f);
-GLuint VAO, VBO;
-
-float aspectRatio = 1.f;
+//Połozenie i wektor kierunku samolotu (x,y,z)
+glm::vec3 planePos = glm::vec3(-4.f, 10, 0);
+glm::vec3 planeDir = glm::vec3(1.f, 0.f, 0.f);
 
 //textury skyboxa, powiny być w trochę innej kolejności ale i tak jest ok
 unsigned int textureID;
 std::vector<std::string> textures_faces = { "./textures/skybox/negz.jpg","./textures/skybox/posz.jpg" ,"./textures/skybox/posy.jpg" ,"./textures/skybox/negy.jpg" ,"./textures/skybox/posx.jpg" ,"./textures/skybox/negx.jpg" };
 
+float aspectRatio = 1.f;
+
+float x = 0.f;
+float z = 0.f;
+
+float k = 180.f;
+
+//to jest od kamery, zrobione identycznie jak w tym pooradniku na stronie
 glm::mat4 createCameraMatrix()
 {
 	glm::vec3 cameraSide = glm::normalize(glm::cross(cameraDir, glm::vec3(0.f, 1.f, 0.f)));
@@ -70,39 +84,29 @@ glm::mat4 createCameraMatrix()
 	return cameraMatrix;
 }
 
+//Moj komentarz macierz perspektywy Aby dostosować zasięg widzenia, 
+// możesz zmienić wartości n (bliska płaszczyzna przycinania) i f (daleka płaszczyzna przycinania). 
+// Zwiększając wartość f lub zmniejszając wartość n, zasięg widzenia będzie większy, co pozwoli na oglądanie odleglejszych obiektów.
 glm::mat4 createPerspectiveMatrix()
 {
-
 	glm::mat4 perspectiveMatrix;
-	float n = 0.05;
-	float f = 20.;
+	float n = 0.01; // Zmniejszenie wartości n
+	float f = 1000.0; // Zwiększenie wartości f
 	float a1 = glm::min(aspectRatio, 1.f);
 	float a2 = glm::min(1 / aspectRatio, 1.f);
 	perspectiveMatrix = glm::mat4({
-		1,0.,0.,0.,
-		0.,aspectRatio,0.,0.,
-		0.,0.,(f + n) / (n - f),2 * f * n / (n - f),
-		0.,0.,-1.,0.,
+		1, 0., 0., 0.,
+		0., aspectRatio, 0., 0.,
+		0., 0., (f + n) / (n - f), 2 * f * n / (n - f),
+		0., 0., -1., 0.,
 		});
-
 
 	perspectiveMatrix = glm::transpose(perspectiveMatrix);
 
 	return perspectiveMatrix;
 }
 
-void drawObjectColor(Core::RenderContext& context, glm::mat4 modelMatrix, glm::vec3 color) {
-
-	glUseProgram(program);
-	glm::mat4 viewProjectionMatrix = createPerspectiveMatrix() * createCameraMatrix();
-	glm::mat4 transformation = viewProjectionMatrix * modelMatrix;
-	glUniformMatrix4fv(glGetUniformLocation(program, "transformation"), 1, GL_FALSE, (float*)&transformation);
-	glUniformMatrix4fv(glGetUniformLocation(program, "modelMatrix"), 1, GL_FALSE, (float*)&modelMatrix);
-	glUniform3f(glGetUniformLocation(program, "color"), color.x, color.y, color.z);
-	glUniform3f(glGetUniformLocation(program, "lightPos"), 0, 0, 0);
-	Core::DrawContext(context);
-
-}
+//z tego co pamiętam to te wszystkie drawObject są do siebie bardzo podobne, różnią się chyba tylko shaderami i światłem
 
 //słońce
 void drawObjectSun(Core::RenderContext& context, glm::mat4 modelMatrix, glm::vec3 color) {
@@ -126,50 +130,72 @@ void drawObjectCube(Core::RenderContext& context, glm::mat4 modelMatrix, GLuint 
 	Core::DrawContext(context);
 }
 
+//wszystko inne
+//Core::RenderContext& context to jest obiekt który renderujesz
+//glm::mat4 modelMatrix to jest pozycja obiektu i jak on się porusza
+//GLuint textureID textura którą nakładasz
+
+void drawObjectTexture(Core::RenderContext& context, glm::mat4 modelMatrix, GLuint textureID) {
+
+	//te dwie linijki na dole to wybranie shadera którego chcesz użyć w tej funckji, shadery ładujesz na dole w init() do zmiennych GLuint
+	glUseProgram(program);
+	glUseProgram(programTex);
+
+	//te dwie na dole to obliczają pozycję obiektu 
+	glm::mat4 viewProjectionMatrix = createPerspectiveMatrix() * createCameraMatrix();
+	glm::mat4 transformation = viewProjectionMatrix * modelMatrix;
+
+	//wszyastkie te które zaczynają się od glUniform przekazują zmienne do shaderów, na przykład ta pierwsza przekazuje wartości do shadera zapisanego w zmiennej programTex, do zmiennej tranformation
+	glUniformMatrix4fv(glGetUniformLocation(programTex, "transformation"), 1, GL_FALSE, (float*)&transformation);
+	glUniformMatrix4fv(glGetUniformLocation(programTex, "modelMatrix"), 1, GL_FALSE, (float*)&modelMatrix);
+
+	//Kolor świecenie słońca, glm::vec3(1.0, 0, 0) - to bedzie czerwony.
+	glm::vec3 lightColor = glm::vec3(0.8, 0.8, 0.0);
+	glUniform3f(glGetUniformLocation(program, "lightColor"), lightColor.x, lightColor.y, lightColor.z);
+	glUniform3f(glGetUniformLocation(program, "cameraPos"), cameraPos.x, cameraPos.y, cameraPos.z);
+
+	//Pozycja światła ze słońca
+	glm::vec3 lightPos = glm::vec3(6.0, 12.0, 6.0);
+	glUniform3f(glGetUniformLocation(program, "lightPos"), lightPos.x, lightPos.y, lightPos.z);
+
+	//Swiecenie latarni
+	glUniform3f(glGetUniformLocation(program, "spotPos"), 16.0, 4.5, 8.0);
+	glUniform3f(glGetUniformLocation(program, "spotDir"), 0.0, -1.0, 0.0);
+	glUniform1f(glGetUniformLocation(program, "phi"), 180.0f);
+	glUniform1f(glGetUniformLocation(program, "spotIntensity"), 12.0f);
+
+	//tu odpalasz texturę i potem obiekt
+	Core::SetActiveTexture(textureID, "colorTexture", programTex, 0);
+	Core::DrawContext(context);
+}
+
 void renderScene(GLFWwindow* window)
 {
+	//kolejność następnych 5 linijek kodu jest nieprzypadkowa, nie pamiętam dokładnie dlaczego ale tak ma być bo w innej kolejności to nie działało dobrze
+	glDisable(GL_DEPTH_TEST);
 	glClearColor(0.0f, 0.3f, 0.3f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glm::mat4 transformation;
-	float time = glfwGetTime();
 
-
-	glUseProgram(program);
-
-	drawObjectColor(sphereContext, glm::mat4(), glm::vec3(1.0, 1.0, 0.3));
-
-	drawObjectColor(sphereContext, glm::eulerAngleY(time / 3) * glm::translate(glm::vec3(4.f, 0, 0)) * glm::scale(glm::vec3(0.3f)), glm::vec3(0.2, 0.7, 0.3));
-
-	drawObjectColor(sphereContext,
-		glm::eulerAngleY(time / 3) * glm::translate(glm::vec3(4.f, 0, 0)) * glm::eulerAngleY(time) * glm::translate(glm::vec3(1.f, 0, 0)) * glm::scale(glm::vec3(0.1f)),
-		glm::vec3(0.5, 0.5, 0.5));
-
-	glm::vec3 spaceshipSide = glm::normalize(glm::cross(spaceshipDir, glm::vec3(0.f, 1.f, 0.f)));
-	glm::vec3 spaceshipUp = glm::normalize(glm::cross(spaceshipSide, spaceshipDir));
-	glm::mat4 specshipCameraRotrationMatrix = glm::mat4({
-		spaceshipSide.x,spaceshipSide.y,spaceshipSide.z,0,
-		spaceshipUp.x,spaceshipUp.y,spaceshipUp.z ,0,
-		-spaceshipDir.x,-spaceshipDir.y,-spaceshipDir.z,0,
-		0.,0.,0.,1.,
-		});
-
-
-	//drawObjectColor(shipContext,
-	//	glm::translate(cameraPos + 1.5 * cameraDir + cameraUp * -0.5f) * inveseCameraRotrationMatrix * glm::eulerAngleY(glm::pi<float>()),
-	//	glm::vec3(0.3, 0.3, 0.5)
-	//	);
-	drawObjectColor(shipContext,
-		glm::translate(spaceshipPos) * specshipCameraRotrationMatrix * glm::eulerAngleY(glm::pi<float>()),
-		glm::vec3(0.3, 0.3, 0.5)
-	);
+	//to jest skyBox, on powinien zmieniać swoją pozycję razem z samolotem
+	drawObjectCube(cubeContext, glm::translate(planePos), textureID);
+	glEnable(GL_DEPTH_TEST);
 
 	float time = glfwGetTime();
 
 	//slonce, w 3 parametrze mozna zmienic kolor np vec3(1.0, 0.0, 0.0) to czerwony.
 	drawObjectSun(sphereContext, glm::translate(glm::vec3(6.0, 25.0, 6.0)) * glm::scale(glm::vec3(10.0)), glm::vec3(1.0, 1.0, 0.1));
 
+	//kot
+	drawObjectTexture(catContext, glm::translate(glm::vec3(15, 0, 8)) * glm::scale(glm::vec3(0.03f)) * glm::rotate(glm::radians(-90.0f), glm::vec3(1, 0, 0)), texture::cat);
+
+	//latarnia
+	drawObjectTexture(lightPoleContext, glm::translate(glm::vec3(16.0, -0.5, 8.0)) * glm::scale(glm::vec3(0.8)) * glm::rotate(glm::radians(180.0f), glm::vec3(0, 1, 0)), texture::lighPole);
+
 	//kosmita
-	drawObjectTexture(alienContext, glm::translate(glm::vec3(15.0, 0.5 + (sin(time*20)/2), 8.0)) * glm::scale(glm::vec3(0.02)) * glm::rotate(glm::radians(-90.0f), glm::vec3(1, 0, 0)), texture::alien);
+	drawObjectTexture(alienContext, glm::translate(glm::vec3(15.0, 0.5 + (sin(time * 20) / 2), 8.0)) * glm::scale(glm::vec3(0.02)) * glm::rotate(glm::radians(-90.0f), glm::vec3(1, 0, 0)), texture::alien);
+
+	//podłoga
+	drawObjectTexture(cubeContext, glm::translate(glm::vec3(6.5, -0.1, 6.5)) * glm::scale(glm::vec3(2.0f, 0.02f, 1.4f)), texture::road);
 
 	//zbiornik tank
 	drawObjectTexture(tankContext, glm::translate(glm::vec3(18, 0, 14)) * glm::scale(glm::vec3(2)) * glm::rotate(glm::radians(-30.0f), glm::vec3(0, 1, 0)), texture::tank);
@@ -179,15 +205,16 @@ void renderScene(GLFWwindow* window)
 
 	//wark samolotu
 	drawObjectTexture(airplane2Context, glm::translate(glm::vec3(16, 0, 0)) * glm::scale(glm::vec3(0.7f)) * glm::scale(glm::vec3(0.02)) * glm::rotate(glm::radians(-90.0f), glm::vec3(1, 0, 0)) * glm::rotate(glm::radians(30.0f), glm::vec3(0, 0, 1)), texture::rustedCar);
-	
-	//road
-	drawObjectTexture(cubeContext, glm::translate(glm::vec3(6.5, -0.1, 6.5)) * glm::scale(glm::vec3(2.0f, 0.02f, 1.4f)), texture::road);
 
-	//kot
-	drawObjectTexture(catContext, glm::translate(glm::vec3(15, 0, 8)) * glm::scale(glm::vec3(0.03f)) * glm::rotate(glm::radians(-90.0f), glm::vec3(1, 0, 0)), texture::cat);
-
-	//wark samolotu
-	drawObjectTexture(airplane2Context, glm::translate(glm::vec3(16, 0, 0)) * glm::scale(glm::vec3(0.7f)) * glm::scale(glm::vec3(0.02)) * glm::rotate(glm::radians(-90.0f), glm::vec3(1, 0, 0)) * glm::rotate(glm::radians(30.0f), glm::vec3(0, 0, 1)), texture::rustedCar);
+	// to jest od kamery i sterowania, tak samo jak w poradniku zrobione
+	glm::vec3 planeSide = glm::normalize(glm::cross(planeDir, glm::vec3(0.f, 1.f, 0.f)));
+	glm::vec3 planeUp = glm::normalize(glm::cross(planeSide, planeDir));
+	glm::mat4 planeCameraRotrationMatrix = glm::mat4({
+		planeSide.x,planeSide.y,planeSide.z,0,
+		planeUp.x,planeUp.y,planeUp.z ,0,
+		-planeDir.x,-planeDir.y,-planeDir.z,0,
+		0.,0.,0.,1.,
+		});
 
 	//samolot którym sterujesz
 	drawObjectTexture(planeContext,
@@ -223,11 +250,37 @@ void loadModelToContext(std::string path, Core::RenderContext& context)
 
 void init(GLFWwindow* window)
 {
+	glGenTextures(1, &textureID);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
+
+	int width, height, nrChannels;
+	unsigned char* data;
+	for (unsigned int i = 0; i < textures_faces.size(); i++)
+	{
+		data = stbi_load(textures_faces[i].c_str(), &width, &height, &nrChannels, 0);
+		glTexImage2D(
+			GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
+			0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data
+		);
+	}
+
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
-	glEnable(GL_DEPTH_TEST);
-	program = shaderLoader.CreateProgram("shaders/shader_5_1.vert", "shaders/shader_5_1.frag");
+	//tu są ładowane te shadery 
+	program = shaderLoader.CreateProgram("shaders/shader_main.vert", "shaders/shader_main.frag");
+	programTex = shaderLoader.CreateProgram("shaders/shader_tex.vert", "shaders/shader_tex.frag");
+	programSun = shaderLoader.CreateProgram("shaders/shader_sun.vert", "shaders/shader_sun.frag");
+	programCubeMap = shaderLoader.CreateProgram("shaders/shader_skybox.vert", "shaders/shader_skybox.frag");
 
+	//tu są ładowane modele, zajebane z internetu darmowe pierwsze lepsze co działały i umiałem je dodać, 
+	//jeśli będziesz je zmieniał to szukaj takich które mają dodane textury jako jeden plik jpg lub png, często są dodane textury jako kilka osobnych plików i ja nie wiem jak to dobrze zrobić żeby to ładnie wyglądało, najłatwiej mieć takie obiekty które mają jeden prosty obrazek
+	//pamiętaj też że różne obiekty są ustawione domyślnie pod różnym kątem i mają różne wielkości, jeśli załadujesz nowy obiekt to pewnie będziesz musiał go odpowiednio obrócić i zmienić jego rozmiar
 	loadModelToContext("./models/sphere.obj", sphereContext);
 	loadModelToContext("./models/10593_Fighter_Jet_SG_v1_iterations-2.obj", planeContext);
 	loadModelToContext("./models/cube.obj", cubeContext);
@@ -248,13 +301,6 @@ void init(GLFWwindow* window)
 	texture::tank = Core::LoadTexture("./textures/water_tank_col.png");
 	texture::rustedCar = Core::LoadTexture("./textures/Car Uv.png");
 	texture::airplane2 = Core::LoadTexture("./textures/Car Uv.jpg");
-
-
-}
-
-void shutdown(GLFWwindow* window)
-{
-	shaderLoader.DeleteProgram(program);
 }
 
 //sterowanie samolotem, chyba wszystko jest tak samo jak w poradniku, tylko nazwy zmiennych zmieniłem żeby udawać że sam to robiłem 
@@ -308,4 +354,8 @@ void renderLoop(GLFWwindow* window) {
 		glfwPollEvents();
 	}
 }
-//}
+
+void shutdown(GLFWwindow* window)
+{
+	shaderLoader.DeleteProgram(program);
+}
